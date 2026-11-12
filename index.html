@@ -131,11 +131,10 @@ h2.pk { margin: 0 0 8px; }
       <button class="ghost clr" type="button" id="clr" aria-label="入力をクリア">消す</button>
       <button class="go" type="submit" id="go">開く</button>
     </div>
-    <p class="hint" id="hint">例：ヨハネ 3:16 ／ マタイ一章一節から五節 ／ 詩篇23 ／ 1コリント13:4-7 ／ Jn 3:16 ／ 요한복음 3:16</p>
+    <p class="hint" id="hint">例：ヨハネ 3:16 ／ マタイ一章一節から五節 ／ 詩篇23 ／ 1コリント13:4-7 ／ Jn 3:16 ／ 요한복음 3:16。入力欄が空のときは、下で選んだ箇所を開きます。</p>
     <div class="opts">
       <label for="pref">主な訳</label>
       <select id="pref"><option value="kougo">口語訳</option><option value="s3">新改訳 第3版</option><option value="krv">개역개정</option></select>
-      <label class="chk" for="auto"><input type="checkbox" id="auto">Enterで主な訳を自動で開く</label>
     </div>
   </form>
 
@@ -408,7 +407,7 @@ function showChoices(list, nums, lead) {
   box.hidden = false;
 }
 
-function render(r, nums, cands, noHist) {
+function render(r, nums, cands, noHist, openNow) {
   $("result").hidden = true; $("vers").hidden = true; $("note17").hidden = true; $("choices").hidden = true;
   setPickGo(null);
   if (!r.ok) { say(r.error, "err"); current = null; return; }
@@ -440,12 +439,12 @@ function render(r, nums, cands, noHist) {
   if (others.length) showChoices(others, nums || r.nums, "他の候補：");
   if (!noHist) pushHist(r);
   drawHist();
-  if (!noHist && $("auto").checked) { try { var f1 = ul.querySelector("a.ver"); if (f1) f1.click(); } catch (e) {} }
+  if (!noHist && openNow) { try { var f1 = ul.querySelector("a.ver"); if (f1) f1.click(); } catch (e) {} }
 }
 
-function run(noHist) {
+function run(noHist, openNow) {
   var r = parse($("q").value);
-  render(r, r.nums, r.candidates, noHist);
+  render(r, r.nums, r.candidates, noHist, openNow);
 }
 
 function drawHist() {
@@ -502,7 +501,7 @@ function syncPicker(r) {
   $("selV1").value = r.v1 ? String(r.v1) : "";
   $("selV2").value = (r.v2 && !r.ch2) ? String(r.v2) : "";
 }
-function fromPicker() {
+function fromPicker(openNow) {
   var book = bookByCode($("selBook").value), ch = parseInt($("selCh").value, 10) || 1;
   var v1 = $("selV1").value ? parseInt($("selV1").value, 10) : null;
   var v2 = $("selV2").value ? parseInt($("selV2").value, 10) : null;
@@ -510,15 +509,18 @@ function fromPicker() {
   var nums = v1 ? { a: ch, b: v1, two: true, c: v2, c2: null } : (book.ch === 1 ? null : { a: ch, two: false });
   var r = place(book, nums, { ok: true, candidates: [book] });
   if (r.ok) { r.note = null; $("q").value = lab(r); }
-  render(r, nums, [book], true);
+  render(r, nums, [book], !openNow, openNow);
 }
 $("selBook").addEventListener("change", function () {
   fillSel($("selCh"), 1, bookByCode(this.value).ch, null); $("selV1").value = ""; $("selV2").value = ""; fromPicker();
 });
-["selCh", "selV1", "selV2"].forEach(function (id) { $(id).addEventListener("change", fromPicker); });
+["selCh", "selV1", "selV2"].forEach(function (id) { $(id).addEventListener("change", function () { fromPicker(false); }); });
 $("pickGo").addEventListener("click", function () { if (current) { pushHist(current); drawHist(); } });
 
-$("f").addEventListener("submit", function (e) { e.preventDefault(); run(); });
+$("f").addEventListener("submit", function (e) {
+  e.preventDefault();
+  if (!$("q").value.trim()) fromPicker(true); else run(false, true);
+});
 $("copyRef").addEventListener("click", function () {
   if (!current) return;
   var r = current;
@@ -536,10 +538,9 @@ $("clr").addEventListener("click", function () { var q = $("q"); q.value = ""; s
 $("clearHist").addEventListener("click", function () { writeHist([]); drawHist(); say("履歴を消しました。", "ok"); });
 
 var PKEY = "bible4:prefs";
-(function () { try { var p = JSON.parse(localStorage.getItem(PKEY) || "{}"); if (p.pref) $("pref").value = p.pref; $("auto").checked = !!p.auto; } catch (e) {} })();
-function savePrefs() { try { localStorage.setItem(PKEY, JSON.stringify({ pref: $("pref").value, auto: $("auto").checked })); } catch (e) {} }
+(function () { try { var p = JSON.parse(localStorage.getItem(PKEY) || "{}"); if (p.pref) $("pref").value = p.pref; } catch (e) {} })();
+function savePrefs() { try { localStorage.setItem(PKEY, JSON.stringify({ pref: $("pref").value })); } catch (e) {} }
 $("pref").addEventListener("change", function () { savePrefs(); if (current) run(true); });
-$("auto").addEventListener("change", savePrefs);
 
 initPicker();
 drawHist();
