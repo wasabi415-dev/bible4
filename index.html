@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c5cb8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root { color-scheme: light; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+<title>聖書4訳ランチャー</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap">
+<style>
+/* Layout: 1列の道具。上に入力、下に4つの大きな「開く」ボタン、いちばん下に履歴。 */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --ink: #141a22;
+  --muted: #566170;
+  --line: #d6dce4;
+  --accent: #1c5cb8;
+  --accent-ink: #ffffff;
+  --accent-soft: #e6eefa;
+  --warn: #9a3d08;
+  --warn-soft: #fbece2;
+  --sans: "Noto Sans JP", "Noto Sans KR", system-ui, "Hiragino Sans", "Yu Gothic", sans-serif;
+  --serif: "Noto Serif JP", "Noto Serif KR", "Hiragino Mincho ProN", "Yu Mincho", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1319; --surface: #171e27; --ink: #e9eef5; --muted: #9aa7b8; --line: #2a3441;
+    --accent: #7db0ff; --accent-ink: #0b1522; --accent-soft: #1c2a40; --warn: #f0a37a; --warn-soft: #3a2518;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1319; --surface: #171e27; --ink: #e9eef5; --muted: #9aa7b8; --line: #2a3441;
+  --accent: #7db0ff; --accent-ink: #0b1522; --accent-soft: #1c2a40; --warn: #f0a37a; --warn-soft: #3a2518;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.6;
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+h1 { font-family: var(--serif); font-size: 24px; line-height: 1.3; margin: 0; text-wrap: balance; }
+.lede { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+form { display: flex; flex-direction: column; gap: 8px; }
+label { font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--muted); }
+.row { display: flex; gap: 8px; }
+input[type="text"] {
+  flex: 1; min-width: 0; font: inherit; font-size: 20px; padding: 14px 14px; color: var(--ink);
+  background: var(--surface); border: 2px solid var(--line); border-radius: 10px;
+}
+input[type="text"]:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button { font: inherit; cursor: pointer; }
+.go {
+  font-size: 18px; font-weight: 700; padding: 0 22px; border: 0; border-radius: 10px;
+  background: var(--accent); color: var(--accent-ink);
+}
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+.row .clr { flex: none; min-width: 64px; }
+.opts { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; font-size: 14px; }
+.opts select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.opts .chk { display: flex; gap: 8px; align-items: center; }
+.opts input[type="checkbox"] { width: 20px; height: 20px; }
+.msg { min-height: 1.4em; margin: 0; font-size: 14px; }
+.msg.err { color: var(--warn); background: var(--warn-soft); padding: 10px 12px; border-radius: 8px; }
+.msg.ok { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chips .lab { font-size: 13px; color: var(--muted); }
+.chip { font-size: 15px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--accent-soft); color: var(--ink); }
+.passage { display: flex; flex-direction: column; gap: 2px; }
+.passage .main { font-family: var(--serif); font-size: 22px; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.passage .sub { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.vers { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ver { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; text-decoration: none; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.ver .t { flex: 1; min-width: 0; }
+.ver .n { display: block; font-size: 19px; font-weight: 700; }
+.ver .s { display: block; font-size: 13px; color: var(--muted); }
+.ver .go-mark { font-size: 20px; color: var(--accent); font-weight: 700; }
+.ver:active { background: var(--accent-soft); }
+.ver.off { opacity: .7; border-style: dashed; }
+.ver.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); min-height: 80px; }
+.ver.primary .s { color: inherit; opacity: .85; }
+.ver.primary .n { font-size: 22px; }
+.ver.primary .go-mark { color: inherit; }
+.ver.primary:active { opacity: .85; }
+.ver.off .go-mark { color: var(--muted); }
+.note { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 12px 14px; font-size: 14px; color: var(--muted); }
+.note p { margin: 0 0 8px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.ghost { font-size: 15px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+h2 { font-size: 14px; letter-spacing: .06em; margin: 0 0 8px; color: var(--muted); }
+.hist { display: flex; flex-wrap: wrap; gap: 8px; }
+footer { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+footer p { margin: 0 0 6px; }
+h2.pk { margin: 0 0 8px; }
+.picker { display: flex; flex-direction: column; gap: 10px; }
+.picker .small { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.fld { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.picker select { font: inherit; font-size: 18px; min-height: 50px; padding: 8px 10px; width: 100%; min-width: 0; color: var(--ink);
+  background: var(--surface); border: 2px solid var(--line); border-radius: 10px; }
+.pickgo { display: flex; align-items: center; justify-content: center; min-height: 60px; text-decoration: none; font-size: 20px; text-align: center; }
+.pickgo[aria-disabled="true"] { opacity: .45; pointer-events: none; }
+.picker select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1>聖書4訳ランチャー</h1>
+    <p class="lede">箇所を入れると、口語訳・新改訳・개역개정を開くボタンが出ます。本文はこのページに保存しません。</p>
+  </header>
+
+  <form id="f" autocomplete="off">
+    <label for="q">聖書箇所</label>
+    <div class="row">
+      <input type="text" id="q" value="ヨハネ 3:16" inputmode="text" enterkeyhint="go" autocapitalize="none" autocorrect="off" spellcheck="false" aria-describedby="hint">
+      <button class="ghost clr" type="button" id="clr" aria-label="入力をクリア">消す</button>
+      <button class="go" type="submit" id="go">開く</button>
+    </div>
+    <p class="hint" id="hint">例：ヨハネ 3:16 ／ マタイ一章一節から五節 ／ 詩篇23 ／ 1コリント13:4-7 ／ Jn 3:16 ／ 요한복음 3:16</p>
+    <div class="opts">
+      <label for="pref">主な訳</label>
+      <select id="pref"><option value="kougo">口語訳</option><option value="s3">新改訳 第3版</option><option value="krv">개역개정</option></select>
+      <label class="chk" for="auto"><input type="checkbox" id="auto">Enterで主な訳を自動で開く</label>
+    </div>
+  </form>
+
+  <section class="picker" aria-label="プルダウンで選ぶ">
+    <h2 class="pk">または、選んで開く</h2>
+    <div class="fld"><label for="selBook">書</label><select id="selBook"></select></div>
+    <div class="small">
+      <div class="fld"><label for="selCh">章</label><select id="selCh"></select></div>
+      <div class="fld"><label for="selV1">節（から）</label><select id="selV1"></select></div>
+      <div class="fld"><label for="selV2">節（まで）</label><select id="selV2"></select></div>
+    </div>
+    <a class="go pickgo" id="pickGo" target="_blank" rel="noopener noreferrer" aria-disabled="true">開く</a>
+  </section>
+
+  <p class="msg" id="msg" role="status" aria-live="polite"></p>
+
+  <section id="result" hidden aria-label="開くボタン">
+    <div class="passage">
+      <div class="main" id="pmain"></div>
+      <div class="sub" id="psub"></div>
+    </div>
+  </section>
+  <ul class="vers" id="vers" hidden></ul>
+  <div class="chips" id="choices" hidden></div>
+  <div class="note" id="note17" hidden>
+    <p><strong>新改訳2017</strong>：章節で開けるウェブ版はありません。新日本聖書刊行会の聖句検索は、単語で本文を探す作りで、「聖書箇所での検索はできません」と表示されます（2026-11-12 確認）。章節で開くには、公式アプリ「聖書 新改訳2017」（有料。Android 版は未確認）が必要です。</p>
+    <p><a href="https://www.seisho.or.jp/biblesearch/" target="_blank" rel="noopener noreferrer">単語で本文を検索する（新日本聖書刊行会）</a></p>
+    <div class="tools"><button type="button" class="ghost" id="copyRef">箇所名をコピー</button><button type="button" class="ghost" id="copyAll">4訳の案内をコピー</button></div>
+  </div>
+
+  <section id="histSec" hidden>
+    <h2>最近開いた箇所</h2>
+    <div class="hist" id="hist"></div>
+    <div class="tools" style="margin-top:10px"><button type="button" class="ghost" id="clearHist">履歴を消す</button></div>
+  </section>
+
+  <footer>
+    <p>リンクの確認日：2026-11-12（口語訳・新改訳第3版・개역개정は、ヨハネ3:16で開くことを確認）。章の数は66巻の表で確かめます。節の数は確かめません。</p>
+    <p>節の範囲（3:16-18、マタイ一章一節から五節 など）は、その範囲を開きます。章をまたぐ範囲（3:36-4:2）は、最初の節を開きます。</p>
+    <p>ボタンは外のページ（YouVersion など）を開くので、表示まで数秒かかります。このページは本文を持ちません。</p>
+    <p>出典：口語訳と新改訳第3版は YouVersion、개역개정は大韓聖書公会、新改訳2017は新日本聖書刊行会。</p>
+  </footer>
+</main>
+
+<script>
+/*PARSE-START*/
+var BOOKS_RAW = [
+ "GEN|50|創世記|創世記|創,gen,ge|창세기|Genesis",
+ "EXO|40|出エジプト記|出エジプト記|出,出エジ,exo,ex|출애굽기|Exodus",
+ "LEV|27|レビ記|レビ記|レビ,lev|레위기|Leviticus",
+ "NUM|36|民数記|民数記|民,num|민수기|Numbers",
+ "DEU|34|申命記|申命記|申,deu,dt|신명기|Deuteronomy",
+ "JOS|24|ヨシュア記|ヨシュア記|ヨシュア,ヨシュ,jos|여호수아|Joshua",
+ "JDG|21|士師記|士師記|士,jdg|사사기|Judges",
+ "RUT|4|ルツ記|ルツ記|ルツ,rut|룻기|Ruth",
+ "1SA|31|サムエル記上|第一サムエル記|サムエル上,1サムエル,第一サムエル,1sa,1sam|사무엘상|1 Samuel",
+ "2SA|24|サムエル記下|第二サムエル記|サムエル下,2サムエル,第二サムエル,2sa,2sam|사무엘하|2 Samuel",
+ "1KI|22|列王紀上|第一列王記|列王上,1列王記,第一列王,1ki,1kgs|열왕기상|1 Kings",
+ "2KI|25|列王紀下|第二列王記|列王下,2列王記,第二列王,2ki,2kgs|열왕기하|2 Kings",
+ "1CH|29|歴代誌上|第一歴代誌|歴代上,1歴代誌,第一歴代,1ch|역대상|1 Chronicles",
+ "2CH|36|歴代誌下|第二歴代誌|歴代下,2歴代誌,第二歴代,2ch|역대하|2 Chronicles",
+ "EZR|10|エズラ記|エズラ記|エズラ,ezr|에스라|Ezra",
+ "NEH|13|ネヘミヤ記|ネヘミヤ記|ネヘミヤ,neh|느헤미야|Nehemiah",
+ "EST|10|エステル記|エステル記|エステル,est|에스더|Esther",
+ "JOB|42|ヨブ記|ヨブ記|ヨブ,job|욥기|Job",
+ "PSA|150|詩篇|詩篇|詩,詩編,psa,ps,psalm|시편|Psalms",
+ "PRO|31|箴言|箴言|箴,pro,prov|잠언|Proverbs",
+ "ECC|12|伝道の書|伝道者の書|伝道者,伝道,ecc|전도서|Ecclesiastes",
+ "SNG|8|雅歌|雅歌|雅,sng,song|아가|Song of Solomon",
+ "ISA|66|イザヤ書|イザヤ書|イザヤ,isa|이사야|Isaiah",
+ "JER|52|エレミヤ書|エレミヤ書|エレミヤ,jer|예레미야|Jeremiah",
+ "LAM|5|哀歌|哀歌|哀,lam|예레미야애가|Lamentations",
+ "EZK|48|エゼキエル書|エゼキエル書|エゼキエル,eze,ezk|에스겔|Ezekiel",
+ "DAN|12|ダニエル書|ダニエル書|ダニエル,dan|다니엘|Daniel",
+ "HOS|14|ホセア書|ホセア書|ホセア,hos|호세아|Hosea",
+ "JOL|3|ヨエル書|ヨエル書|ヨエル,jol,joel|요엘|Joel",
+ "AMO|9|アモス書|アモス書|アモス,amo|아모스|Amos",
+ "OBA|1|オバデヤ書|オバデヤ書|オバデヤ,oba|오바댜|Obadiah",
+ "JON|4|ヨナ書|ヨナ書|ヨナ,jon|요나|Jonah",
+ "MIC|7|ミカ書|ミカ書|ミカ,mic|미가|Micah",
+ "NAM|3|ナホム書|ナホム書|ナホム,nam,nah|나훔|Nahum",
+ "HAB|3|ハバクク書|ハバクク書|ハバクク,hab|하박국|Habakkuk",
+ "ZEP|3|ゼパニヤ書|ゼパニヤ書|ゼパニヤ,zep|스바냐|Zephaniah",
+ "HAG|2|ハガイ書|ハガイ書|ハガイ,hag|학개|Haggai",
+ "ZEC|14|ゼカリヤ書|ゼカリヤ書|ゼカリヤ,zec|스가랴|Zechariah",
+ "MAL|4|マラキ書|マラキ書|マラキ,mal|말라기|Malachi",
+ "MAT|28|マタイによる福音書|マタイの福音書|マタイ,マタイ福音書,mat,mt|마태복음|Matthew",
+ "MRK|16|マルコによる福音書|マルコの福音書|マルコ,マルコ福音書,mrk,mk|마가복음|Mark",
+ "LUK|24|ルカによる福音書|ルカの福音書|ルカ,ルカ福音書,luk,lk|누가복음|Luke",
+ "JHN|21|ヨハネによる福音書|ヨハネの福音書|ヨハネ,ヨハネ福音書,ヨハ,jhn,jn|요한복음|John",
+ "ACT|28|使徒行伝|使徒の働き|使徒,使,act|사도행전|Acts",
+ "ROM|16|ローマ人への手紙|ローマ人への手紙|ローマ,ローマ書,ロマ,rom|로마서|Romans",
+ "1CO|16|コリント人への第一の手紙|コリント人への手紙第一|1コリント,第一コリント,コリント第一,1co|고린도전서|1 Corinthians",
+ "2CO|13|コリント人への第二の手紙|コリント人への手紙第二|2コリント,第二コリント,コリント第二,2co|고린도후서|2 Corinthians",
+ "GAL|6|ガラテヤ人への手紙|ガラテヤ人への手紙|ガラテヤ,ガラテヤ書,gal|갈라디아서|Galatians",
+ "EPH|6|エペソ人への手紙|エペソ人への手紙|エペソ,エペソ書,eph|에베소서|Ephesians",
+ "PHP|4|ピリピ人への手紙|ピリピ人への手紙|ピリピ,ピリピ書,php,phil|빌립보서|Philippians",
+ "COL|4|コロサイ人への手紙|コロサイ人への手紙|コロサイ,コロサイ書,col|골로새서|Colossians",
+ "1TH|5|テサロニケ人への第一の手紙|テサロニケ人への手紙第一|1テサロニケ,第一テサロニケ,テサロニケ第一,1th|데살로니가전서|1 Thessalonians",
+ "2TH|3|テサロニケ人への第二の手紙|テサロニケ人への手紙第二|2テサロニケ,第二テサロニケ,テサロニケ第二,2th|데살로니가후서|2 Thessalonians",
+ "1TI|6|テモテへの第一の手紙|テモテへの手紙第一|1テモテ,第一テモテ,テモテ第一,1ti|디모데전서|1 Timothy",
+ "2TI|4|テモテへの第二の手紙|テモテへの手紙第二|2テモテ,第二テモテ,テモテ第二,2ti|디모데후서|2 Timothy",
+ "TIT|3|テトスへの手紙|テトスへの手紙|テトス,tit|디도서|Titus",
+ "PHM|1|ピレモンへの手紙|ピレモンへの手紙|ピレモン,phm|빌레몬서|Philemon",
+ "HEB|13|ヘブル人への手紙|ヘブル人への手紙|ヘブル,ヘブライ,ヘブル書,heb|히브리서|Hebrews",
+ "JAS|5|ヤコブの手紙|ヤコブの手紙|ヤコブ,jas|야고보서|James",
+ "1PE|5|ペテロの第一の手紙|ペテロの手紙第一|1ペテロ,第一ペテロ,ペテロ第一,1pe|베드로전서|1 Peter",
+ "2PE|3|ペテロの第二の手紙|ペテロの手紙第二|2ペテロ,第二ペテロ,ペテロ第二,2pe|베드로후서|2 Peter",
+ "1JN|5|ヨハネの第一の手紙|ヨハネの手紙第一|1ヨハネ,第一ヨハネ,ヨハネ第一,1jn,1john|요한일서|1 John",
+ "2JN|1|ヨハネの第二の手紙|ヨハネの手紙第二|2ヨハネ,第二ヨハネ,ヨハネ第二,2jn,2john|요한이서|2 John",
+ "3JN|1|ヨハネの第三の手紙|ヨハネの手紙第三|3ヨハネ,第三ヨハネ,ヨハネ第三,3jn,3john|요한삼서|3 John",
+ "JUD|1|ユダの手紙|ユダの手紙|ユダ,jud|유다서|Jude",
+ "REV|22|ヨハネの黙示録|ヨハネの黙示録|黙示録,黙示,rev|요한계시록|Revelation"
+];
+
+function norm(s) {
+  return s.normalize("NFKC").toLowerCase().replace(/[–—−]/g, "-").replace(/[\s　]/g, "");
+}
+function aliasNorm(s) { return norm(s).replace(/[.・･]/g, ""); }
+
+var BOOKS = BOOKS_RAW.map(function (r) {
+  var p = r.split("|");
+  var extra = p[4] ? p[4].split(",") : [];
+  var names = [p[2], p[3], p[5], p[6]].concat(extra).map(aliasNorm);
+  return { code: p[0], ch: parseInt(p[1], 10), kougo: p[2], shin: p[3], ko: p[5], en: p[6], aliases: names };
+});
+function bookByCode(c) { for (var i = 0; i < BOOKS.length; i++) if (BOOKS[i].code === c) return BOOKS[i]; return null; }
+
+var NUMC = "[0-9〇一二三四五六七八九十百]+";
+var CHS = "(?:章|篇|편|장|:|\\.|,)";
+var VS = "(?:節|절)?";
+var RNG = "(?:から|[-~〜ー])";
+var ENDW = "(?:まで)?";
+var NG = "(?<!第)";
+var TAIL = new RegExp("(?:" + NG + "(" + NUMC + ")" + CHS + "(" + NUMC + ")" + VS +
+  "(?:" + RNG + "(" + NUMC + ")(?:(?:章|:|\\.)(" + NUMC + "))?" + VS + ENDW + ")?" +
+  "|" + NG + "(" + NUMC + ")" + VS + RNG + "(" + NUMC + ")" + VS + ENDW +
+  "|" + NG + "(" + NUMC + ")(?:章|篇|편|장|節|절)?)$");
+
+function toInt(s) {
+  if (/^[0-9]+$/.test(s)) return parseInt(s, 10);
+  var D = { "〇": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
+  var total = 0, cur = 0, i, c;
+  for (i = 0; i < s.length; i++) {
+    c = s.charAt(i);
+    if (c in D) cur = cur * 10 + D[c];
+    else if (c === "十") { total += (cur || 1) * 10; cur = 0; }
+    else if (c === "百") { total += (cur || 1) * 100; cur = 0; }
+    else if (/[0-9]/.test(c)) cur = cur * 10 + parseInt(c, 10);
+  }
+  return total + cur;
+}
+
+function hasAlias(str) {
+  for (var i = 0; i < BOOKS.length; i++) if (BOOKS[i].aliases.indexOf(str) >= 0) return true;
+  return false;
+}
+function findBooks(h) {
+  var exact = [], prefix = [], i, b;
+  for (i = 0; i < BOOKS.length; i++) {
+    b = BOOKS[i];
+    if (b.aliases.indexOf(h) >= 0) exact.push(b);
+    else if (b.aliases.some(function (a) { return a.indexOf(h) === 0; })) prefix.push(b);
+  }
+  return { exact: exact, prefix: prefix };
+}
+
+/* 入力 → { ok, error, book, ch, v1, v2, ch2, candidates, needChoice, nums } */
+function parse(raw) {
+  var t = String(raw || "").normalize("NFKC").trim().replace(/(\d)[\s]+(?=\d)/g, "$1:");
+  var s = norm(t);
+  if (!s) return { ok: false, error: "箇所を入れてください。例：ヨハネ 3:16" };
+  var whole = s.replace(/[.・･]/g, "");
+  var m = null, head = s, nums = null;
+  if (!hasAlias(whole)) m = TAIL.exec(s);
+  if (m) {
+    head = s.slice(0, m.index);
+    if (m[1] !== undefined) {
+      nums = { a: toInt(m[1]), b: toInt(m[2]), two: true, c: null, c2: null };
+      if (m[4] !== undefined) { nums.c2 = toInt(m[3]); nums.c = toInt(m[4]); }
+      else if (m[3] !== undefined) { nums.c = toInt(m[3]); }
+    } else if (m[5] !== undefined) {
+      nums = { a: toInt(m[5]), b: toInt(m[6]), two: false, range: true };
+    } else {
+      nums = { a: toInt(m[7]), two: false };
+    }
+  }
+  head = head.replace(/[.・･]/g, "").replace(/^([一二三])(?=[ァ-ヶ])/, function (d) { return "123".charAt("一二三".indexOf(d)); });
+  if (!head) return { ok: false, error: "書名が見つかりません。例：ヨハネ 3:16" };
+  var f = findBooks(head);
+  if (!f.exact.length && !f.prefix.length && head.length > 1 && head.slice(-1) === "の") f = findBooks(head.slice(0, -1));
+  var cands = f.exact.concat(f.prefix);
+  if (!cands.length) return { ok: false, error: "「" + t + "」の書名が分かりません。書名を短く（例：ヨハネ、詩篇、1コリント）入れてください。" };
+  var out = { ok: true, nums: nums, candidates: cands, needChoice: false, book: null };
+  if (f.exact.length) out.book = f.exact[0];
+  else if (f.prefix.length === 1) out.book = f.prefix[0];
+  else { out.needChoice = true; return out; }
+  return place(out.book, nums, out);
+}
+
+/* 書と数字から、章・節を決めて検証する */
+function place(book, nums, out) {
+  out = out || { ok: true, candidates: [book] };
+  out.book = book; out.needChoice = false; out.ok = true; out.error = null; out.note = null; out.ch2 = null;
+  var ch = 1, v1 = null, v2 = null;
+  if (!nums) { ch = 1; out.note = "章が書かれていないので、1章を開きます。"; }
+  else if (nums.two) { ch = nums.a; v1 = nums.b; v2 = nums.c; if (nums.c2) out.ch2 = nums.c2; }
+  else if (nums.range) {
+    if (book.ch === 1) { ch = 1; v1 = nums.a; v2 = nums.b; }
+    else { out.ok = false; out.error = "章の範囲（" + nums.a + "-" + nums.b + "）には対応していません。節の範囲は 3:16-18 の形で入れてください。"; return out; }
+  }
+  else if (book.ch === 1) { ch = 1; v1 = nums.a; }
+  else { ch = nums.a; }
+  if (ch < 1 || ch > book.ch) { out.ok = false; out.error = book.kougo + "は" + book.ch + "章までです。"; return out; }
+  if (v1 !== null && v1 < 1) { out.ok = false; out.error = "節は1以上で入れてください。"; return out; }
+  if (out.ch2) {
+    if (out.ch2 === ch) out.ch2 = null;
+    else if (out.ch2 < ch || out.ch2 > book.ch) { out.ok = false; out.error = "章の範囲が正しくありません（" + ch + "章〜" + out.ch2 + "章）。" + book.kougo + "は" + book.ch + "章までです。"; return out; }
+  }
+  if (v2 !== null && !out.ch2) {
+    if (v2 < v1) { out.ok = false; out.error = "節の範囲が逆です（" + v1 + "-" + v2 + "）。"; return out; }
+    if (v2 === v1) v2 = null;
+  }
+  out.ch = ch; out.v1 = v1; out.v2 = v2;
+  return out;
+}
+/*PARSE-END*/
+
+function refCode(r) { var c = r.book.code + "." + r.ch; if (r.v1) { c += "." + r.v1; if (r.v2 && !r.ch2) c += "-" + r.v2; } return c; }
+function label(book, ch, v1, v2, name, ch2) {
+  var n = name || book.kougo;
+  if (ch2) return n + " " + ch + ":" + v1 + "-" + ch2 + ":" + v2;
+  if (book.ch === 1) return n + (v1 ? " " + v1 + (v2 ? "-" + v2 : "") + "節" : "");
+  return n + " " + ch + (v1 ? ":" + v1 + (v2 ? "-" + v2 : "") : "");
+}
+function lab(r, name) { return label(r.book, r.ch, r.v1, r.v2, name, r.ch2); }
+function links(r) {
+  var c = refCode(r);
+  return [
+    { id: "kougo", name: "口語訳", src: "日本聖書協会（YouVersion）", url: "https://www.bible.com/ja/bible/1820/" + c },
+    { id: "s3", name: "新改訳 第3版", src: "新日本聖書刊行会（YouVersion）", url: "https://www.bible.com/ja/bible/4869/" + c },
+    { id: "krv", name: "개역개정", src: "大韓聖書公会 聖書プラットフォーム", url: "https://bible.bskorea.or.kr/bible/NKRV/" + c + (r.v1 ? "#NKRV." + r.book.code + "." + r.ch + "." + r.v1 : "") },
+    { id: "s17", name: "新改訳2017", src: "章節で開くウェブ版はありません（公式アプリは有料）", url: null }
+  ];
+}
+
+var $ = function (id) { return document.getElementById(id); };
+var current = null;
+var HKEY = "bible4:history";
+
+function readHist() { try { var v = JSON.parse(localStorage.getItem(HKEY) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+function writeHist(a) { try { localStorage.setItem(HKEY, JSON.stringify(a)); } catch (e) {} }
+function pushHist(r) {
+  var item = { code: r.book.code, ch: r.ch, v1: r.v1, v2: r.v2, ch2: r.ch2 || null };
+  var key = JSON.stringify(item);
+  var h = readHist().filter(function (x) { return JSON.stringify(x) !== key; });
+  h.unshift(item); writeHist(h.slice(0, 12));
+}
+function say(text, kind) { var m = $("msg"); m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
+
+function showChoices(list, nums, lead) {
+  var box = $("choices"); box.textContent = "";
+  if (!list.length) { box.hidden = true; return; }
+  var lab = document.createElement("span"); lab.className = "lab"; lab.textContent = lead; box.appendChild(lab);
+  list.forEach(function (b) {
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "chip"; btn.textContent = b.kougo;
+    btn.addEventListener("click", function () { render(place(b, nums, { ok: true, candidates: [b] }), nums, [b]); });
+    box.appendChild(btn);
+  });
+  box.hidden = false;
+}
+
+function render(r, nums, cands, noHist) {
+  $("result").hidden = true; $("vers").hidden = true; $("note17").hidden = true; $("choices").hidden = true;
+  setPickGo(null);
+  if (!r.ok) { say(r.error, "err"); current = null; return; }
+  if (r.needChoice) { say("どの書ですか。選んでください。", "ok"); showChoices(r.candidates, r.nums, "候補："); current = null; return; }
+  current = r;
+  say(r.note || "", "ok");
+  syncPicker(r);
+  var rangeNote = r.ch2 ? "（章をまたぐ範囲は、最初の節を開きます）" : "";
+  $("pmain").textContent = lab(r);
+  $("psub").textContent = "新改訳：" + lab(r, r.book.shin) + "　／　" + lab(r, r.book.ko) + rangeNote;
+  var ul = $("vers"); ul.textContent = "";
+  var all = links(r), pref = $("pref").value;
+  var ordered = all.filter(function (x) { return x.id === pref; }).concat(all.filter(function (x) { return x.id !== pref; }));
+  setPickGo(ordered[0]);
+  ordered.forEach(function (l, i) {
+    var li = document.createElement("li"), a = document.createElement(l.url ? "a" : "div");
+    a.className = "ver" + (l.url ? "" : " off") + (i === 0 && l.url ? " primary" : "");
+    if (l.url) { a.href = l.url; a.target = "_blank"; a.rel = "noopener noreferrer"; }
+    var t = document.createElement("span"); t.className = "t";
+    var n = document.createElement("span"); n.className = "n"; n.textContent = l.name;
+    var s = document.createElement("span"); s.className = "s"; s.textContent = l.src;
+    t.appendChild(n); t.appendChild(s);
+    var g = document.createElement("span"); g.className = "go-mark"; g.textContent = l.url ? "↗" : "–"; g.setAttribute("aria-hidden", "true");
+    if (l.url) a.addEventListener("click", function () { pushHist(r); drawHist(); });
+    a.appendChild(t); a.appendChild(g); li.appendChild(a); ul.appendChild(li);
+  });
+  $("result").hidden = false; ul.hidden = false; $("note17").hidden = false;
+  var others = (r.candidates || []).filter(function (b) { return b !== r.book; });
+  if (others.length) showChoices(others, nums || r.nums, "他の候補：");
+  if (!noHist) pushHist(r);
+  drawHist();
+  if (!noHist && $("auto").checked) { try { var f1 = ul.querySelector("a.ver"); if (f1) f1.click(); } catch (e) {} }
+}
+
+function run(noHist) {
+  var r = parse($("q").value);
+  render(r, r.nums, r.candidates, noHist);
+}
+
+function drawHist() {
+  var h = readHist(), box = $("hist"); box.textContent = "";
+  $("histSec").hidden = !h.length;
+  h.forEach(function (x) {
+    var b = bookByCode(x.code); if (!b) return;
+    var btn = document.createElement("button"); btn.type = "button"; btn.className = "chip"; btn.textContent = label(b, x.ch, x.v1, x.v2, null, x.ch2);
+    btn.addEventListener("click", function () {
+      $("q").value = label(b, x.ch, x.v1, x.v2, null, x.ch2); run();
+      window.scrollTo(0, 0);
+    });
+    box.appendChild(btn);
+  });
+}
+
+function copyText(text, okMsg) {
+  function fallback() {
+    try {
+      var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); var ok = document.execCommand("copy"); document.body.removeChild(ta);
+      say(ok ? okMsg : "コピーできませんでした。", ok ? "ok" : "err");
+    } catch (e) { say("コピーできませんでした。", "err"); }
+  }
+  try { navigator.clipboard.writeText(text).then(function () { say(okMsg, "ok"); }, fallback); } catch (e) { fallback(); }
+}
+
+function fillSel(el, from, to, blank) {
+  el.textContent = "";
+  if (blank !== null) { var o0 = document.createElement("option"); o0.value = ""; o0.textContent = blank; el.appendChild(o0); }
+  for (var i = from; i <= to; i++) { var o = document.createElement("option"); o.value = String(i); o.textContent = String(i); el.appendChild(o); }
+}
+function initPicker() {
+  var sb = $("selBook"), g1 = document.createElement("optgroup"), g2 = document.createElement("optgroup");
+  g1.label = "旧約聖書"; g2.label = "新約聖書";
+  BOOKS.forEach(function (b, i) {
+    var o = document.createElement("option"); o.value = b.code; o.textContent = b.kougo;
+    (i < 39 ? g1 : g2).appendChild(o);
+  });
+  sb.appendChild(g1); sb.appendChild(g2);
+  fillSel($("selV1"), 1, 176, "—"); fillSel($("selV2"), 1, 176, "—");
+  fillSel($("selCh"), 1, bookByCode(sb.value).ch, null);
+}
+function setPickGo(l) {
+  var a = $("pickGo");
+  if (l && l.url) { a.href = l.url; a.textContent = l.name + "で開く ↗"; a.removeAttribute("aria-disabled"); }
+  else { a.removeAttribute("href"); a.textContent = "開く"; a.setAttribute("aria-disabled", "true"); }
+}
+function syncPicker(r) {
+  if (!r || !r.ok || r.needChoice || !r.book) return;
+  $("selBook").value = r.book.code;
+  fillSel($("selCh"), 1, r.book.ch, null);
+  $("selCh").value = String(r.ch);
+  $("selV1").value = r.v1 ? String(r.v1) : "";
+  $("selV2").value = (r.v2 && !r.ch2) ? String(r.v2) : "";
+}
+function fromPicker() {
+  var book = bookByCode($("selBook").value), ch = parseInt($("selCh").value, 10) || 1;
+  var v1 = $("selV1").value ? parseInt($("selV1").value, 10) : null;
+  var v2 = $("selV2").value ? parseInt($("selV2").value, 10) : null;
+  if (!v1 && v2) { $("selV2").value = ""; v2 = null; }
+  var nums = v1 ? { a: ch, b: v1, two: true, c: v2, c2: null } : (book.ch === 1 ? null : { a: ch, two: false });
+  var r = place(book, nums, { ok: true, candidates: [book] });
+  if (r.ok) { r.note = null; $("q").value = lab(r); }
+  render(r, nums, [book], true);
+}
+$("selBook").addEventListener("change", function () {
+  fillSel($("selCh"), 1, bookByCode(this.value).ch, null); $("selV1").value = ""; $("selV2").value = ""; fromPicker();
+});
+["selCh", "selV1", "selV2"].forEach(function (id) { $(id).addEventListener("change", fromPicker); });
+$("pickGo").addEventListener("click", function () { if (current) { pushHist(current); drawHist(); } });
+
+$("f").addEventListener("submit", function (e) { e.preventDefault(); run(); });
+$("copyRef").addEventListener("click", function () {
+  if (!current) return;
+  var r = current;
+  copyText(lab(r, r.book.shin), "箇所名をコピーしました。");
+});
+$("copyAll").addEventListener("click", function () {
+  if (!current) return;
+  var r = current, ls = links(r);
+  var lines = [lab(r)];
+  ls.slice(0, 3).forEach(function (l) { lines.push(l.name + "：" + l.url); });
+  lines.push("新改訳2017：" + lab(r, r.book.shin) + "（章節で開くウェブ版はありません）");
+  copyText(lines.join("\n"), "4訳の案内をコピーしました。");
+});
+$("clr").addEventListener("click", function () { var q = $("q"); q.value = ""; say("", ""); q.focus(); });
+$("clearHist").addEventListener("click", function () { writeHist([]); drawHist(); say("履歴を消しました。", "ok"); });
+
+var PKEY = "bible4:prefs";
+(function () { try { var p = JSON.parse(localStorage.getItem(PKEY) || "{}"); if (p.pref) $("pref").value = p.pref; $("auto").checked = !!p.auto; } catch (e) {} })();
+function savePrefs() { try { localStorage.setItem(PKEY, JSON.stringify({ pref: $("pref").value, auto: $("auto").checked })); } catch (e) {} }
+$("pref").addEventListener("change", function () { savePrefs(); if (current) run(true); });
+$("auto").addEventListener("change", savePrefs);
+
+initPicker();
+drawHist();
+run(true);
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+}
+</script>
+</body>
+</html>
